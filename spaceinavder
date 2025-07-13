@@ -1,0 +1,123 @@
+import tkinter as tk
+import random
+
+class SpaceInvaders:
+    def __init__(self):
+        self.window = tk.Tk()
+        self.window.title("Space Invaders")
+        self.window.resizable(False, False)
+
+        self.canvas = tk.Canvas(self.window, width=600, height=400, bg="black")
+        self.canvas.pack()
+
+        self.ship_width = 50
+        self.ship_height = 30
+        self.ship = self.canvas.create_rectangle(275, 350, 325, 380, fill="blue")
+
+        self.bullets = []
+        self.aliens = []
+        self.alien_speed = 1
+        self.bullet_speed = 10
+        self.alien_direction = 1  # 1 for right, -1 for left
+
+        self.create_aliens()
+        self.setup_controls()
+        self.score = 0
+        self.game_over = False
+        self.score_text = self.canvas.create_text(10, 10, anchor="nw", text="Score: 0", fill="white", font=("Arial", 12))
+        self.run_game()
+
+    def create_aliens(self):
+        # Create 5 rows of aliens
+        for row in range(5):
+            for col in range(10):
+                alien = self.canvas.create_rectangle(50 + col * 50, 30 + row * 40, 90 + col * 50, 70 + row * 40, fill="green")
+                self.aliens.append(alien)
+
+    def setup_controls(self):
+        self.window.bind("<Left>", self.move_left)
+        self.window.bind("<Right>", self.move_right)
+        self.window.bind("<space>", self.shoot_bullet)
+
+    def move_left(self, event):
+        if not self.game_over:
+            self.canvas.move(self.ship, -20, 0)
+
+    def move_right(self, event):
+        if not self.game_over:
+            self.canvas.move(self.ship, 20, 0)
+
+    def shoot_bullet(self, event):
+        if not self.game_over:
+            x1, y1, x2, y2 = self.canvas.coords(self.ship)
+            bullet = self.canvas.create_oval(x1 + self.ship_width / 2 - 5, y1 - 10, x1 + self.ship_width / 2 + 5, y1 - 20, fill="white")
+            self.bullets.append(bullet)
+
+    def update_bullets(self):
+        for bullet in self.bullets[:]:
+            self.canvas.move(bullet, 0, -self.bullet_speed)
+            if self.canvas.coords(bullet)[1] < 0:
+                self.canvas.delete(bullet)
+                self.bullets.remove(bullet)
+
+    def update_aliens(self):
+        for alien in self.aliens:
+            self.canvas.move(alien, self.alien_speed, 0)
+            x1, y1, x2, y2 = self.canvas.coords(alien)
+            if x2 >= 600 or x1 <= 0:
+                self.alien_direction *= -1
+                self.alien_speed = -self.alien_speed
+                for alien in self.aliens:
+                    self.canvas.move(alien, 0, 20)
+                break
+
+    def check_collisions(self):
+        for bullet in self.bullets[:]:
+            bx1, by1, bx2, by2 = self.canvas.coords(bullet)
+            for alien in self.aliens[:]:
+                ax1, ay1, ax2, ay2 = self.canvas.coords(alien)
+                if bx1 < ax2 and bx2 > ax1 and by1 < ay2 and by2 > ay1:
+                    self.canvas.delete(bullet)
+                    self.canvas.delete(alien)
+                    self.bullets.remove(bullet)
+                    self.aliens.remove(alien)
+
+                    # Increase score by 10 for each alien destroyed
+                    self.score += 10
+                    self.update_score()
+
+                    break
+
+        # Check if any alien touches the ship
+        x1, y1, x2, y2 = self.canvas.coords(self.ship)
+        for alien in self.aliens:
+            ax1, ay1, ax2, ay2 = self.canvas.coords(alien)
+            if ax1 < x2 and ax2 > x1 and ay1 < y2 and ay2 > y1:
+                self.end_game()
+                break
+
+    def update_score(self):
+        self.canvas.itemconfig(self.score_text, text=f"Score: {self.score}")
+
+    def end_game(self):
+        self.game_over = True
+        self.canvas.create_text(300, 200, text="GAME OVER", fill="red", font=("Arial", 30))
+        self.canvas.create_text(300, 240, text="Press Q to Quit", fill="white", font=("Arial", 15))
+        self.canvas.create_text(300, 270, text=f"Final Score: {self.score}", fill="white", font=("Arial", 15))
+        self.window.bind("<q>", self.quit_game)
+
+    def quit_game(self, event):
+        self.window.quit()
+
+    def run_game(self):
+        if not self.game_over:
+            self.update_bullets()
+            self.update_aliens()
+            self.check_collisions()
+
+            # Continue the game loop
+            self.window.after(20, self.run_game)
+
+if __name__ == "__main__":
+    game = SpaceInvaders()
+    game.window.mainloop()
